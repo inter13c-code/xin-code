@@ -67,6 +67,9 @@ type App struct {
 	OnModelSwitch func(string)
 	OnExport      func() string
 	OnResume      func() string
+	OnSkillsList  func() string
+	OnPluginsList func() string
+	OnHooksList   func() string
 
 	// 会话信息
 	SessionID    string
@@ -448,6 +451,9 @@ func (a *App) handleSlashCommand(cmd string) (tea.Model, tea.Cmd) {
 		OnModelSwitch:       a.OnModelSwitch,
 		OnExport:            a.OnExport,
 		OnResume:            a.OnResume,
+		OnSkillsList:        a.OnSkillsList,
+		OnPluginsList:       a.OnPluginsList,
+		OnHooksList:         a.OnHooksList,
 	}
 
 	result, handled := a.slashHandler.Handle(cmd, ctx)

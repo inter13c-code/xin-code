@@ -64,6 +64,9 @@ type Context struct {
 	OnLogin       func() string    // /login
 	OnLogout      func() string    // /logout
 	OnMCPList     func() string    // /mcp
+	OnSkillsList  func() string    // /skills
+	OnPluginsList func() string    // /plugins
+	OnHooksList   func() string    // /hooks
 }
 
 // Handler 斜杠命令路由器
@@ -683,9 +686,13 @@ func cmdMemory() *Command {
 func cmdSkills() *Command {
 	return &Command{
 		Name:        "/skills",
-		Description: "技能系统",
+		Description: "已加载的技能列表",
 		Handler: func(args []string, ctx *Context) Result {
-			return Result{Type: ResultDisplay, Content: "技能系统将在 Phase 4 中实现"}
+			if ctx.OnSkillsList != nil {
+				msg := ctx.OnSkillsList()
+				return Result{Type: ResultDisplay, Content: msg}
+			}
+			return Result{Type: ResultDisplay, Content: "技能系统未初始化"}
 		},
 	}
 }
@@ -693,9 +700,13 @@ func cmdSkills() *Command {
 func cmdPlugins() *Command {
 	return &Command{
 		Name:        "/plugins",
-		Description: "插件系统",
+		Description: "已加载的插件列表",
 		Handler: func(args []string, ctx *Context) Result {
-			return Result{Type: ResultDisplay, Content: "插件系统将在 Phase 4 中实现"}
+			if ctx.OnPluginsList != nil {
+				msg := ctx.OnPluginsList()
+				return Result{Type: ResultDisplay, Content: msg}
+			}
+			return Result{Type: ResultDisplay, Content: "插件系统未初始化"}
 		},
 	}
 }
@@ -703,9 +714,13 @@ func cmdPlugins() *Command {
 func cmdHooks() *Command {
 	return &Command{
 		Name:        "/hooks",
-		Description: "钩子系统",
+		Description: "已配置的钩子列表",
 		Handler: func(args []string, ctx *Context) Result {
-			return Result{Type: ResultDisplay, Content: "钩子系统将在 Phase 4 中实现"}
+			if ctx.OnHooksList != nil {
+				msg := ctx.OnHooksList()
+				return Result{Type: ResultDisplay, Content: msg}
+			}
+			return Result{Type: ResultDisplay, Content: "钩子系统未初始化"}
 		},
 	}
 }
