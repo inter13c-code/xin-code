@@ -95,10 +95,19 @@ func NewApp(cfg AppConfig) *App {
 	sp.Style = lipgloss.NewStyle().Foreground(ColorAccent)
 
 	slashH := slash.NewHandler()
+	chat := NewChatView(80, 20)
+
+	// 欢迎信息
+	welcome := StyleBrand.Render("⚡ XIN CODE") + " " + StyleHint.Render("v"+cfg.Version) + "\n\n" +
+		StyleTextDim.Render("  模型: ") + StyleModel.Render(cfg.Model) + "\n" +
+		StyleTextDim.Render("  权限: ") + StyleHint.Render(cfg.PermMode) + "\n" +
+		StyleTextDim.Render("  工具: ") + StyleHint.Render(fmt.Sprintf("%d 个", cfg.ToolCount)) + "\n\n" +
+		StyleTextDim.Render("  输入消息开始对话。/help 查看命令。")
+	chat.AddSystemMessage(welcome)
 
 	return &App{
 		statusBar:    NewStatusBar(cfg.Model, cfg.Tracker, cfg.MaxContext),
-		chat:         NewChatView(80, 20),
+		chat:         chat,
 		input:        NewInputBox(slashH.CommandNames()),
 		permission:   NewPermissionDialog(),
 		spinner:      sp,

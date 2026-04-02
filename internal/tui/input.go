@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"regexp"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/textarea"
@@ -64,7 +65,7 @@ func (i InputBox) Update(msg tea.Msg) (InputBox, tea.Cmd) {
 				return i, nil
 			}
 			// 过滤掉终端 ANSI 转义序列响应（如 OSC 11 背景色查询的响应）
-			if strings.Contains(text, "\x1b") || strings.HasPrefix(text, "]") {
+			if containsANSI(text) {
 				i.textarea.Reset()
 				return i, nil
 			}
@@ -148,4 +149,19 @@ func (i *InputBox) Reset() {
 // Value 获取当前值
 func (i InputBox) Value() string {
 	return i.textarea.Value()
+}
+
+// ansiRegex 匹配 ANSI 转义序列和 OSC 响应
+var ansiRegex = regexp.MustCompile(`[\x00-\x08\x0e-\x1f]|\x1b\[.*?[a-zA-Z]|\][\d;]*[a-zA-Z/\\]`)
+
+// containsANSI 检测文本是否包含 ANSI 控制序列
+func containsANSI(s string) bool {
+	if ansiRegex.MatchString(s) {
+		return true
+	}
+	// 额外检查 OSC 响应的常见模式（不一定以 ESC 开头，可能被截断）
+	if strings.Contains(s, "rgb:") || strings.HasPrefix(s, "]") {
+		return true
+	}
+	return false
 }

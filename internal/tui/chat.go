@@ -44,7 +44,7 @@ func NewChatView(width, height int) ChatView {
 	vp.Style = lipgloss.NewStyle()
 
 	renderer, _ := glamour.NewTermRenderer(
-		glamour.WithAutoStyle(),
+		glamour.WithStylePath("dark"),
 		glamour.WithWordWrap(width-4),
 	)
 
@@ -69,7 +69,7 @@ func (c ChatView) Update(msg tea.Msg) (ChatView, tea.Cmd) {
 		c.viewport.Height = msg.Height
 		// 重新创建渲染器
 		c.renderer, _ = glamour.NewTermRenderer(
-			glamour.WithAutoStyle(),
+			glamour.WithStylePath("dark"),
 			glamour.WithWordWrap(msg.Width-4),
 		)
 		c.refreshContent()

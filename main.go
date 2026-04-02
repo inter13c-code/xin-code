@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/xincode-ai/xin-code/internal/cost"
@@ -219,7 +220,21 @@ func main() {
 	// 启动 TUI
 	// 预设终端背景色检测，避免 Lipgloss OSC 查询导致 ANSI 响应泄漏到输入框
 	os.Setenv("GLAMOUR_STYLE", "dark")
-	prog := tea.NewProgram(app, tea.WithAltScreen())
+	prog := tea.NewProgram(app,
+		tea.WithAltScreen(),
+		tea.WithFilter(func(m tea.Model, msg tea.Msg) tea.Msg {
+			// 过滤掉终端 OSC 响应（背景/前景色查询回复）
+			// 这些响应会被 Bubbletea 的 stdin reader 捕获
+			if keyMsg, ok := msg.(tea.KeyMsg); ok {
+				s := keyMsg.String()
+				if strings.Contains(s, "rgb:") || strings.HasPrefix(s, "]") ||
+					strings.Contains(s, "\x1b") {
+					return nil
+				}
+			}
+			return msg
+		}),
+	)
 	if _, err := prog.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "TUI 错误: %s\n", err)
 		os.Exit(1)
