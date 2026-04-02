@@ -190,10 +190,14 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.width = msg.Width
 		a.height = msg.Height
 
-		// 布局分配：状态栏 1 行，输入框 ~3 行，剩余给对话区
-		statusH := 1
-		inputH := 3
-		chatH := a.height - statusH - inputH - 2 // 2 行间距
+		// 布局分配：状态栏含边框 ~3 行，分隔线 2 行，输入框含边框 ~4 行
+		statusH := 3  // 状态栏（含 border 行）
+		sepH := 2     // 顶部 + 底部分隔线
+		inputH := 4   // 输入框（含 InputFrame 边框和 padding）
+		chatH := a.height - statusH - sepH - inputH
+		if chatH < 5 {
+			chatH = 5
+		}
 
 		chatMsg := tea.WindowSizeMsg{Width: msg.Width, Height: chatH}
 		a.statusBar, _ = a.statusBar.Update(msg)
@@ -413,6 +417,9 @@ func (a *App) View() string {
 	// 状态栏（顶部）
 	sections = append(sections, a.statusBar.View())
 
+	// 顶部分隔线
+	sections = append(sections, StyleSeparator.Render(strings.Repeat(SeparatorChar, a.width)))
+
 	// 对话区域（中间）
 	chatView := a.chat.View()
 	sections = append(sections, chatView)
@@ -420,17 +427,21 @@ func (a *App) View() string {
 	// 状态指示器（极简，不抢视觉）
 	switch a.state {
 	case StateQuery:
-		sections = append(sections, "  "+a.spinner.View())
+		sections = append(sections, StyleTextDim.Render("  "+a.spinner.View()))
 	case StateToolExec:
-		sections = append(sections, "  "+a.spinner.View())
+		sections = append(sections, StyleTextDim.Render("  "+a.spinner.View()))
 	}
+
+	// 底部分隔线
+	sections = append(sections, StyleSeparator.Render(strings.Repeat(SeparatorChar, a.width)))
 
 	// 权限对话框（覆盖在输入框位置）
 	if a.permission.IsVisible() {
 		sections = append(sections, a.permission.View())
 	} else {
-		// 输入框（底部）
-		sections = append(sections, a.input.View())
+		// 输入框（底部）- 带边框框架
+		inputContent := a.input.View()
+		sections = append(sections, StyleInputFrame.Render(inputContent))
 	}
 
 	return lipgloss.JoinVertical(lipgloss.Left, sections...)

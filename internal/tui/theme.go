@@ -45,12 +45,6 @@ var (
 
 // 样式定义
 var (
-	// 状态栏
-	StyleStatusBar = lipgloss.NewStyle().
-		Background(lipgloss.Color("#1E293B")).
-		Foreground(ColorText).
-		Padding(0, 1)
-
 	StyleBrand = lipgloss.NewStyle().
 		Foreground(ColorBrand).
 		Bold(true)
@@ -140,6 +134,94 @@ var (
 	StyleErrorMsg = lipgloss.NewStyle().
 		Foreground(ColorError).
 		Bold(true)
+
+	// ========== 边框与分隔样式 ==========
+
+	// 主边框（区域分隔）
+	StyleBorder = lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(ColorBgAlt).
+		Foreground(ColorText)
+
+	// 标题边框
+	StyleTitleBorder = lipgloss.NewStyle().
+		Border(lipgloss.NormalBorder()).
+		BorderForeground(ColorBrand).
+		BorderTop(true).
+		BorderBottom(false).
+		BorderLeft(false).
+		BorderRight(false)
+
+	// 分隔线（水平）
+	StyleSeparator = lipgloss.NewStyle().
+		Foreground(ColorBgAlt)
+
+	// 分割线字符
+	SeparatorChar = "─"
+	SeparatorDouble = "═"
+
+	// 消息块边框
+	StyleUserBlock = lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(ColorBrand).
+		BorderTop(false).
+		BorderBottom(false).
+		BorderLeft(true).
+		BorderRight(false).
+		Padding(0, 0, 0, 1)
+
+	StyleAssistantBlock = lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(ColorAccent).
+		BorderTop(false).
+		BorderBottom(false).
+		BorderLeft(true).
+		BorderRight(false).
+		Padding(0, 0, 0, 1)
+
+	// 工具调用块
+	StyleToolBlock = lipgloss.NewStyle().
+		Border(lipgloss.NormalBorder()).
+		BorderForeground(ColorBgAlt).
+		BorderTop(false).
+		BorderBottom(false).
+		BorderLeft(true).
+		BorderRight(false).
+		Padding(0, 0, 0, 1)
+
+	// 状态栏样式（带边框）
+	StyleStatusBar = lipgloss.NewStyle().
+		Background(ColorBgAlt).
+		Foreground(ColorText).
+		Border(lipgloss.NormalBorder()).
+		BorderBottom(true).
+		BorderForeground(ColorBgAlt).
+		Padding(0, 1)
+
+	// 输入区边框
+	StyleInputFrame = lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(ColorBrand).
+		BorderTop(true).
+		BorderBottom(false).
+		BorderLeft(true).
+		BorderRight(true).
+		Padding(1, 1, 0, 1)
+
+	// 角标（左上角）
+	StyleCorner = lipgloss.NewStyle().
+		Foreground(ColorTextDim)
+
+	// 标签（用于小标签）
+	StyleTag = lipgloss.NewStyle().
+		Foreground(ColorTextDim).
+		Background(ColorBgAlt).
+		Padding(0, 1)
+
+	StyleTagBrand = lipgloss.NewStyle().
+		Foreground(ColorBrand).
+		Background(ColorBgAlt).
+		Padding(0, 1)
 )
 
 // ContextColor 根据上下文使用百分比返回对应颜色

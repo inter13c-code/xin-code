@@ -48,7 +48,7 @@ func NewChatView(width, height int) ChatView {
 
 	renderer, _ := glamour.NewTermRenderer(
 		glamour.WithStylePath("dark"),
-		glamour.WithWordWrap(width-4),
+		glamour.WithWordWrap(width-6),
 	)
 
 	return ChatView{
@@ -72,7 +72,7 @@ func (c ChatView) Update(msg tea.Msg) (ChatView, tea.Cmd) {
 		c.viewport.Height = msg.Height
 		c.renderer, _ = glamour.NewTermRenderer(
 			glamour.WithStylePath("dark"),
-			glamour.WithWordWrap(msg.Width-4),
+			glamour.WithWordWrap(msg.Width-6),
 		)
 		c.refreshContent()
 
@@ -192,20 +192,20 @@ func (c *ChatView) refreshContent() {
 func (c *ChatView) renderMessage(msg ChatMessage) string {
 	switch msg.Role {
 	case "user":
-		prefix := StyleUserPrefix.Render("❯ ")
-		content := StyleUserMsg.Render(msg.Content)
-		return prefix + content
+		prefix := StyleUserPrefix.Render("▎ ")
+		content := msg.Content
+		return StyleUserBlock.Render(prefix) + " " + content
 
 	case "assistant":
 		// CC 风格：● 前缀标记 AI 响应块
-		prefix := lipgloss.NewStyle().Foreground(ColorText).Render("● ")
+		prefix := lipgloss.NewStyle().Foreground(ColorText).Render("▎ ")
 		if c.renderer != nil {
 			rendered, err := c.renderer.Render(msg.Content)
 			if err == nil {
-				return prefix + strings.TrimSpace(rendered)
+				return StyleAssistantBlock.Render(prefix) + " " + strings.TrimSpace(rendered)
 			}
 		}
-		return prefix + StyleAIMsg.Render(msg.Content)
+		return StyleAssistantBlock.Render(prefix) + " " + StyleAIMsg.Render(msg.Content)
 
 	case "thinking":
 		// 极简显示，仅一行提示（对标 CC 的 thinking 指示器）
@@ -232,11 +232,11 @@ func (c *ChatView) renderToolMessage(msg ChatMessage) string {
 
 	// 执行中：蓝色 ⏺ + bold 工具名 + dim 参数
 	if msg.Content == "执行中..." {
-		header := StyleToolRunning.Render("  ⏺ ") + StyleToolName.Render(msg.ToolName)
+		header := StyleToolRunning.Render(" ⏺ ") + StyleToolName.Render(msg.ToolName)
 		if argPreview != "" {
 			header += StyleHint.Render("(" + argPreview + ")")
 		}
-		return header
+		return StyleToolBlock.Render(header)
 	}
 
 	// 完成状态：绿/红图标 + bold 工具名 + dim 参数
@@ -250,14 +250,14 @@ func (c *ChatView) renderToolMessage(msg ChatMessage) string {
 		iconStyle = StyleToolSuccess
 	}
 
-	header := iconStyle.Render("  "+icon+" ") + StyleToolName.Render(msg.ToolName)
+	header := iconStyle.Render(" "+icon+" ") + StyleToolName.Render(msg.ToolName)
 	if argPreview != "" {
 		header += StyleHint.Render("(" + argPreview + ")")
 	}
 
 	// 无输出
 	if msg.Content == "" {
-		return header
+		return StyleToolBlock.Render(header)
 	}
 
 	lines := strings.Split(msg.Content, "\n")
@@ -273,15 +273,15 @@ func (c *ChatView) renderToolMessage(msg ChatMessage) string {
 		output := StyleToolOutput.Render(strings.Join(outputLines, "\n"))
 		remaining := lineCount - previewEnd
 		if remaining > 0 {
-			hint := StyleHint.Render(fmt.Sprintf("      … +%d lines (已折叠)", remaining))
-			return header + "\n" + output + "\n" + hint
+			hint := StyleHint.Render(fmt.Sprintf("    … +%d lines (已折叠)", remaining))
+			return StyleToolBlock.Render(header) + "\n" + output + "\n" + hint
 		}
-		return header + "\n" + output
+		return StyleToolBlock.Render(header) + "\n" + output
 	}
 
 	// 完整显示（短输出）
 	outputLines := formatToolOutput(lines)
-	return header + "\n" + StyleToolOutput.Render(strings.Join(outputLines, "\n"))
+	return StyleToolBlock.Render(header) + "\n" + StyleToolOutput.Render(strings.Join(outputLines, "\n"))
 }
 
 // formatToolOutput 格式化工具输出行（缩进对齐，CC 风格）
