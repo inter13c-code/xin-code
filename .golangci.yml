@@ -1,0 +1,23 @@
+version: "2"
+linters:
+  enable:
+    - bodyclose
+    - copyloopvar
+    - durationcheck
+    - exhaustive
+    - gocritic
+    - gofumpt
+    - goimports
+    - govet
+    - ineffassign
+    - misspell
+    - noctx
+    - unused
+
+linters-settings:
+  exhaustive:
+    default-signifies-exhaustive: true
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - style
