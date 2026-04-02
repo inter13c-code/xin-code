@@ -84,5 +84,12 @@ func (t *BashTool) Execute(ctx context.Context, input json.RawMessage) (*tool.Re
 	if output == "" {
 		output = "(no output)"
 	}
+
+	// 限制输出大小，和 Grep 工具保持一致
+	const maxOutput = 50 * 1024
+	if len(output) > maxOutput {
+		output = output[:maxOutput] + "\n... (output truncated)"
+	}
+
 	return &tool.Result{Content: output}, nil
 }

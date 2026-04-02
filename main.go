@@ -64,6 +64,9 @@ func main() {
 	fmt.Printf("XIN CODE %s\n", Version)
 	fmt.Printf("model: %s  provider: %s\n", cfg.Model, p.Name())
 	fmt.Printf("tools: %d  mode: %s\n", len(tools.All()), cfg.Permission.Mode)
+	if cfg.Permission.Mode != "bypass" {
+		fmt.Fprintln(os.Stderr, "⚠ WARNING: Phase 1 权限系统尚未完整实现，所有工具调用将自动放行。Phase 2 将加入 TUI 确认机制。")
+	}
 	fmt.Println("---")
 	fmt.Println("输入消息开始对话。/help 查看命令，/quit 退出。")
 	fmt.Println()
@@ -71,6 +74,14 @@ func main() {
 	// REPL 循环
 	scanner := bufio.NewScanner(os.Stdin)
 	for {
+		// 检查是否收到退出信号
+		select {
+		case <-ctx.Done():
+			fmt.Println("\n收到退出信号，再见！")
+			return
+		default:
+		}
+
 		fmt.Print("> ")
 		if !scanner.Scan() {
 			break

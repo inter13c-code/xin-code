@@ -3,6 +3,7 @@ package context
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"runtime"
 	"strings"
 	"time"
@@ -46,5 +47,25 @@ func BuildSystemPrompt(tools []provider.ToolDef, projectInstructions string) str
 	sb.WriteString(fmt.Sprintf("- 操作系统: %s/%s\n", runtime.GOOS, runtime.GOARCH))
 	sb.WriteString(fmt.Sprintf("- 当前日期: %s\n", time.Now().Format("2006-01-02")))
 
+	// Git 信息
+	if branch, err := getGitOutput("rev-parse", "--abbrev-ref", "HEAD"); err == nil {
+		sb.WriteString(fmt.Sprintf("- Git 分支: %s\n", branch))
+	}
+	if status, err := getGitOutput("status", "--short"); err == nil && status != "" {
+		// 只显示摘要：多少文件有变更
+		lines := strings.Split(strings.TrimSpace(status), "\n")
+		sb.WriteString(fmt.Sprintf("- Git 状态: %d 个文件有变更\n", len(lines)))
+	}
+
 	return sb.String()
+}
+
+// getGitOutput 执行 git 命令并返回输出
+func getGitOutput(args ...string) (string, error) {
+	cmd := exec.Command("git", args...)
+	out, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(out)), nil
 }

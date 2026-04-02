@@ -51,7 +51,7 @@ func (p *AnthropicProvider) Stream(ctx context.Context, req *Request) (<-chan Ev
 
 	// 构建 API 参数
 	params := anthropic.MessageNewParams{
-		Model:     req.Model,
+		Model:     p.model,
 		MaxTokens: int64(req.MaxTokens),
 		Messages:  messages,
 	}
