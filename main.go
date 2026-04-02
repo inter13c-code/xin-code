@@ -233,6 +233,7 @@ func main() {
 	os.Setenv("GLAMOUR_STYLE", "dark")
 	prog := tea.NewProgram(app,
 		tea.WithAltScreen(),
+		tea.WithMouseCellMotion(), // 启用鼠标滚轮支持
 		tea.WithFilter(func(m tea.Model, msg tea.Msg) tea.Msg {
 			// 过滤掉终端 OSC 响应（背景/前景色查询回复）
 			// 这些响应会被 Bubbletea 的 stdin reader 捕获

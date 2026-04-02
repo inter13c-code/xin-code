@@ -237,7 +237,11 @@ func (c *ChatView) renderToolMessage(msg ChatMessage) string {
 	if msg.Folded {
 		lines := strings.Split(msg.Content, "\n")
 		lineCount := len(lines)
-		preview := strings.Join(lines[:3], "\n")
+		previewEnd := 3
+		if previewEnd > lineCount {
+			previewEnd = lineCount
+		}
+		preview := strings.Join(lines[:previewEnd], "\n")
 		return header + "\n" + StyleToolOutput.Render(preview) + "\n" +
 			StyleHint.Render(fmt.Sprintf("  ... (%d 行, 已折叠)", lineCount))
 	}
