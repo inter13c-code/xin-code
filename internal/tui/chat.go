@@ -450,13 +450,10 @@ func (c *ChatView) rebuildCommittedCache() {
 				markers = append(markers, toggleMarker{msgIdx: i, marker: firstLine})
 			case "tool":
 				if msg.Content != "" {
-					// header 行（含工具名+参数，每条工具唯一）
-					firstLine := strings.SplitN(rendered, "\n", 2)[0]
-					markers = append(markers, toggleMarker{msgIdx: i, marker: firstLine})
-					// 折叠提示行
+					// 只注册底部指示器行（▶ 点击展开 / ▼ 点击折叠）
 					rlines := strings.Split(rendered, "\n")
 					lastLine := rlines[len(rlines)-1]
-					if strings.Contains(lastLine, "点击展开") {
+					if strings.Contains(lastLine, "点击展开") || strings.Contains(lastLine, "点击折叠") {
 						markers = append(markers, toggleMarker{msgIdx: i, marker: lastLine})
 					}
 				}
@@ -854,6 +851,9 @@ func (c *ChatView) renderToolMessage(msg ChatMessage) string {
 	if isFolded {
 		outputBody += "\n" + lipgloss.NewStyle().Foreground(ColorBrand).Render(
 			fmt.Sprintf("▶ [+%d 行] 点击展开", lineCount-len(displayLines)))
+	} else if lineCount > foldThreshold {
+		// 展开态且超过阈值：底部加折叠提示
+		outputBody += "\n" + StyleDim.Render("▼ 点击折叠")
 	}
 
 	return header + "\n" + wrapMessageResponse(outputBody)

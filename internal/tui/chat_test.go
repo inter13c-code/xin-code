@@ -115,7 +115,7 @@ func TestToggleMarkers(t *testing.T) {
 	cv.messages = append(cv.messages,
 		ChatMessage{ID: "msg-1", Role: "user", Content: "hello"},
 		ChatMessage{ID: "msg-2", Role: "thinking", Content: "thinking...", Folded: true},
-		ChatMessage{ID: "msg-3", Role: "tool", ToolName: "Bash", Content: "output line"},
+		ChatMessage{ID: "msg-3", Role: "tool", ToolName: "Bash", Content: strings.Repeat("line\n", 20)},
 	)
 
 	cv.invalidateCache()
