@@ -20,6 +20,7 @@ const msgResponsePrefix = " " + SymResponse + " "
 
 // ChatMessage 单条转录消息
 type ChatMessage struct {
+	ID        string // 稳定标识（递增 ID）
 	Role      string // 用户 / 助手 / 工具 / 思考 / 错误 / 系统
 	Content   string
 	ToolName  string // 工具消息时使用
@@ -27,6 +28,15 @@ type ChatMessage struct {
 	ToolInput string // 工具输入参数（原始 JSON）
 	IsError   bool
 	Folded    bool // 是否已折叠
+}
+
+// msgIDCounter 消息 ID 递增计数器
+var msgIDCounter int
+
+// nextMsgID 生成下一个消息 ID
+func nextMsgID() string {
+	msgIDCounter++
+	return fmt.Sprintf("msg-%d", msgIDCounter)
 }
 
 // ChatView 转录区域组件
@@ -42,6 +52,13 @@ type ChatView struct {
 
 	// 工具闪烁状态，配合 MsgSpinnerTick 交替
 	toolBlink bool
+
+	// 未读分隔线（-1 表示无）
+	unreadDividerIdx int
+	// 用户是否在底部（用于判断是否插入未读分隔线）
+	userAtBottom bool
+	// 有未读新消息（用于底部提示）
+	hasNewMessages bool
 
 	// Markdown 渲染器
 	renderer *glamour.TermRenderer
@@ -74,12 +91,14 @@ func NewChatView(width, height int) ChatView {
 	vp.MouseWheelDelta = 3
 
 	return ChatView{
-		viewport:   vp,
-		width:      width,
-		height:     height,
-		renderer:   newGlamourRenderer(width),
-		mdCache:    make(map[string]string),
-		mdCacheMax: 500,
+		viewport:         vp,
+		width:            width,
+		height:           height,
+		renderer:         newGlamourRenderer(width),
+		mdCache:          make(map[string]string),
+		mdCacheMax:       500,
+		unreadDividerIdx: -1,
+		userAtBottom:     true,
 	}
 }
 
@@ -118,6 +137,7 @@ func (c ChatView) Update(msg tea.Msg) (ChatView, tea.Cmd) {
 			c.messages[len(c.messages)-1].Content += msg.Text
 		} else {
 			c.messages = append(c.messages, ChatMessage{
+				ID:      nextMsgID(),
 				Role:    "thinking",
 				Content: msg.Text,
 			})
@@ -127,12 +147,14 @@ func (c ChatView) Update(msg tea.Msg) (ChatView, tea.Cmd) {
 	case MsgToolStart:
 		stick := c.shouldAutoScroll()
 		c.messages = append(c.messages, ChatMessage{
+			ID:        nextMsgID(),
 			Role:      "tool",
 			ToolName:  msg.Name,
 			ToolID:    msg.ID,
 			ToolInput: msg.Input,
 			Content:   "", // 空内容表示执行中
 		})
+		c.markNewMessageIfScrolledUp(stick)
 		c.refreshContent(stick)
 
 	case MsgToolDone:
@@ -153,26 +175,34 @@ func (c ChatView) Update(msg tea.Msg) (ChatView, tea.Cmd) {
 		stick := c.shouldAutoScroll()
 		if c.streamBuf != "" {
 			c.messages = append(c.messages, ChatMessage{
+				ID:      nextMsgID(),
 				Role:    "assistant",
 				Content: c.streamBuf,
 			})
 			c.streamBuf = ""
 			c.streaming = false
+			c.markNewMessageIfScrolledUp(stick)
 			c.refreshContent(stick)
 		}
 
 	case MsgSubmit:
 		c.messages = append(c.messages, ChatMessage{
+			ID:      nextMsgID(),
 			Role:    "user",
 			Content: msg.Text,
 		})
 		c.streamBuf = ""
 		c.streaming = false
+		// 用户发消息，清除未读分隔线
+		c.unreadDividerIdx = -1
+		c.hasNewMessages = false
+		c.userAtBottom = true
 		c.refreshContent(true)
 
 	case MsgSubAgentStart:
 		stick := c.shouldAutoScroll()
 		c.messages = append(c.messages, ChatMessage{
+			ID:      nextMsgID(),
 			Role:    "subagent-start",
 			ToolID:  msg.ID,
 			Content: msg.Description,
@@ -182,6 +212,7 @@ func (c ChatView) Update(msg tea.Msg) (ChatView, tea.Cmd) {
 	case MsgSubAgentDone:
 		stick := c.shouldAutoScroll()
 		c.messages = append(c.messages, ChatMessage{
+			ID:      nextMsgID(),
 			Role:    "subagent-done",
 			ToolID:  msg.ID,
 			Content: msg.Description + "\n" + msg.Result,
@@ -191,6 +222,7 @@ func (c ChatView) Update(msg tea.Msg) (ChatView, tea.Cmd) {
 	case MsgError:
 		stick := c.shouldAutoScroll()
 		c.messages = append(c.messages, ChatMessage{
+			ID:      nextMsgID(),
 			Role:    "error",
 			Content: msg.Err.Error(),
 		})
@@ -208,6 +240,7 @@ func (c ChatView) View() string {
 // AddSystemMessage 添加系统消息
 func (c *ChatView) AddSystemMessage(text string) {
 	c.messages = append(c.messages, ChatMessage{
+		ID:      nextMsgID(),
 		Role:    "system",
 		Content: text,
 	})
@@ -219,6 +252,9 @@ func (c *ChatView) Clear() {
 	c.messages = nil
 	c.streamBuf = ""
 	c.streaming = false
+	c.unreadDividerIdx = -1
+	c.hasNewMessages = false
+	c.userAtBottom = true
 	c.refreshContent(true)
 }
 
@@ -237,6 +273,17 @@ func (c *ChatView) refreshContent(stickToBottom bool) {
 	var sb strings.Builder
 
 	for i, msg := range c.messages {
+		// 未读分隔线
+		if i == c.unreadDividerIdx && i > 0 {
+			sb.WriteString("\n\n")
+			dividerWidth := c.width - 4
+			if dividerWidth < 10 {
+				dividerWidth = 10
+			}
+			divider := StyleDim.Render(strings.Repeat("─", dividerWidth) + " 新消息")
+			sb.WriteString(divider)
+		}
+
 		if i > 0 {
 			sb.WriteString("\n\n")
 		}
@@ -257,6 +304,16 @@ func (c *ChatView) refreshContent(stickToBottom bool) {
 	if stickToBottom {
 		c.viewport.GotoBottom()
 	}
+}
+
+// View 渲染转录区（含底部"跳到最新"提示）
+func (c ChatView) ViewWithHint() string {
+	view := c.viewport.View()
+	if c.hasNewMessages && !c.userAtBottom {
+		hint := StyleDim.Render("  ↓ 有新消息，按 End 跳到最新")
+		return view + "\n" + hint
+	}
+	return view
 }
 
 func (c ChatView) hasInProgressTools() bool {
@@ -281,8 +338,23 @@ func (c ChatView) hasThinking() bool {
 	return false
 }
 
-func (c ChatView) shouldAutoScroll() bool {
-	return c.viewport.AtBottom() || c.viewport.TotalLineCount() == 0
+func (c *ChatView) shouldAutoScroll() bool {
+	atBottom := c.viewport.AtBottom() || c.viewport.TotalLineCount() == 0
+	c.userAtBottom = atBottom
+	if atBottom {
+		// 用户回到底部，清除未读状态
+		c.unreadDividerIdx = -1
+		c.hasNewMessages = false
+	}
+	return atBottom
+}
+
+// markNewMessageIfScrolledUp 如果用户不在底部，标记未读分隔线
+func (c *ChatView) markNewMessageIfScrolledUp(atBottom bool) {
+	if !atBottom && c.unreadDividerIdx < 0 {
+		c.unreadDividerIdx = len(c.messages) - 1 // 在最新消息前插入分隔线
+		c.hasNewMessages = true
+	}
 }
 
 // renderMessage 按 Role 分派渲染
