@@ -616,8 +616,9 @@ func (c *ChatView) renderMessage(msg ChatMessage) string {
 		}
 
 		if msg.Folded || msg.Content == "" {
-			// 折叠态：∴ Thinking (N 字)  首行摘要…
-			header := symStyle.Render(SymThinking) + StyleThinking.Render(" Thinking") + countStr
+			// 折叠态：▶ ∴ Thinking (N 字)  首行摘要…
+			toggle := StyleDim.Render("▶ ")
+			header := toggle + symStyle.Render(SymThinking) + StyleThinking.Render(" Thinking") + countStr
 			if msg.Content != "" {
 				// 取首行前 40 个 rune 作为摘要
 				summary := strings.ReplaceAll(msg.Content, "\n", " ")
@@ -630,8 +631,9 @@ func (c *ChatView) renderMessage(msg ChatMessage) string {
 			return header
 		}
 
-		// 展开态：header + 完整内容（限宽自动换行）
-		header := symStyle.Render(SymThinking) + StyleThinking.Render(" Thinking") + countStr
+		// 展开态：▼ ∴ Thinking (N 字) + 完整内容（限宽自动换行）
+		toggle := StyleDim.Render("▼ ")
+		header := toggle + symStyle.Render(SymThinking) + StyleThinking.Render(" Thinking") + countStr
 		// 内容区宽度 = 终端宽度 - wrapMessageResponse 前缀缩进（约 6 列）
 		bodyWidth := c.width - 6
 		if bodyWidth < 20 {
@@ -835,9 +837,10 @@ func (c *ChatView) renderToolMessage(msg ChatMessage) string {
 	}
 
 	outputBody := StyleToolOutput.Render(strings.Join(displayLines, "\n"))
-	if len(displayLines) < lineCount {
+	isFolded := len(displayLines) < lineCount
+	if isFolded {
 		outputBody += "\n" + lipgloss.NewStyle().Foreground(ColorBrand).Render(
-			fmt.Sprintf("[+%d 行]", lineCount-len(displayLines)))
+			fmt.Sprintf("▶ [+%d 行] 点击展开", lineCount-len(displayLines)))
 	}
 
 	return header + "\n" + wrapMessageResponse(outputBody)
