@@ -109,7 +109,7 @@ func TestClickToggleThinkingFold(t *testing.T) {
 	}
 }
 
-func TestToggleLinesMapping(t *testing.T) {
+func TestToggleMarkers(t *testing.T) {
 	cv := NewChatView(80, 24)
 
 	cv.messages = append(cv.messages,
@@ -121,34 +121,34 @@ func TestToggleLinesMapping(t *testing.T) {
 	cv.invalidateCache()
 	cv.refreshContent(true)
 
-	// toggleLines 应只包含可折叠消息（thinking=1, tool=2），不包含 user=0
-	if len(cv.toggleLines) == 0 {
-		t.Fatal("toggleLines 不应为空")
+	// toggleMarkers 应包含 thinking 和 tool 的标记
+	if len(cv.toggleMarkers) == 0 {
+		t.Fatal("toggleMarkers 不应为空")
 	}
 
-	// user 消息不应出现在 toggleLines 中
-	for _, idx := range cv.toggleLines {
-		if idx == 0 {
-			t.Error("user 消息不应在 toggleLines 中")
+	// user 消息不应有标记
+	for _, m := range cv.toggleMarkers {
+		if m.msgIdx == 0 {
+			t.Error("user 消息不应有 toggleMarker")
 		}
 	}
 
-	// thinking 和 tool 消息应出现
+	// thinking 和 tool 应有标记
 	foundThinking := false
 	foundTool := false
-	for _, idx := range cv.toggleLines {
-		if idx == 1 {
+	for _, m := range cv.toggleMarkers {
+		if m.msgIdx == 1 {
 			foundThinking = true
 		}
-		if idx == 2 {
+		if m.msgIdx == 2 {
 			foundTool = true
 		}
 	}
 	if !foundThinking {
-		t.Error("thinking 消息应在 toggleLines 中")
+		t.Error("thinking 消息应有标记")
 	}
 	if !foundTool {
-		t.Error("tool 消息应在 toggleLines 中")
+		t.Error("tool 消息应有标记")
 	}
 }
 

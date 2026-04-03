@@ -17,6 +17,12 @@ import (
 // 折叠阈值：超过此行数的工具输出自动折叠
 const foldThreshold = 8
 
+// toggleMarker 可点击折叠/展开的标记
+type toggleMarker struct {
+	msgIdx int    // 对应的消息索引
+	marker string // 标记文本（用于在 viewport 行中匹配）
+}
+
 // streamPreviewThrottle 流式 Markdown 预览最小渲染间隔
 const streamPreviewThrottle = 80 * time.Millisecond
 
@@ -86,8 +92,8 @@ type ChatView struct {
 	// 工具输出展开状态：true = 所有输出全展开，false = 超阈值自动折叠
 	toolOutputExpanded bool
 
-	// 可点击指示器行 → 消息索引（精确到 ▶/▼ 所在行）
-	toggleLines map[int]int
+	// 可点击的标记文本 → 消息索引（通过在内容行中搜索标记来定位）
+	toggleMarkers []toggleMarker
 }
 
 // newGlamourRenderer 创建白色文字的 Glamour 渲染器
@@ -293,15 +299,24 @@ func (c ChatView) Update(msg tea.Msg) (ChatView, tea.Cmd) {
 		c.refreshContent(stick)
 	}
 
-	// 鼠标左键点击：精确到 ▶/▼ 指示器行才触发 toggle
+	// 鼠标左键点击：从 viewport 实际行内容匹配 ▶/▼ 标记
 	if mouseMsg, ok := msg.(tea.MouseMsg); ok &&
 		mouseMsg.Button == tea.MouseButtonLeft && mouseMsg.Action == tea.MouseActionRelease {
-		absLine := mouseMsg.Y + c.viewport.YOffset
-		if msgIdx, ok := c.toggleLines[absLine]; ok && msgIdx < len(c.messages) {
-			c.messages[msgIdx].Folded = !c.messages[msgIdx].Folded
-			c.invalidateCache()
-			c.refreshContent(false)
-			return c, nil
+		// 获取点击位置对应的 viewport 内容行
+		clickedLine := mouseMsg.Y + c.viewport.YOffset
+		lines := strings.Split(c.viewport.View(), "\n")
+		if mouseMsg.Y >= 0 && mouseMsg.Y < len(lines) {
+			lineContent := lines[mouseMsg.Y]
+			// 在标记列表中查找匹配
+			for _, m := range c.toggleMarkers {
+				if m.msgIdx < len(c.messages) && strings.Contains(lineContent, m.marker) {
+					_ = clickedLine // 不再用行号定位，纯用内容匹配
+					c.messages[m.msgIdx].Folded = !c.messages[m.msgIdx].Folded
+					c.invalidateCache()
+					c.refreshContent(false)
+					return c, nil
+				}
+			}
 		}
 	}
 
@@ -400,11 +415,10 @@ func (c *ChatView) invalidateCache() {
 	c.cacheValid = false
 }
 
-// rebuildCommittedCache 重建已提交消息的渲染缓存，同时构建可点击行映射
+// rebuildCommittedCache 重建已提交消息的渲染缓存，同时收集可点击标记
 func (c *ChatView) rebuildCommittedCache() {
 	var sb strings.Builder
-	toggleLines := make(map[int]int) // 绝对行号 → 消息索引
-	currentLine := 0
+	var markers []toggleMarker
 
 	for i, msg := range c.messages {
 		if i == c.unreadDividerIdx && i > 0 {
@@ -418,40 +432,34 @@ func (c *ChatView) rebuildCommittedCache() {
 			if sideWidth < 2 {
 				sideWidth = 2
 			}
-			divider := divStyle.Render(
-				strings.Repeat("━", sideWidth) + " 新消息 " + strings.Repeat("━", sideWidth))
-			sb.WriteString(divider)
-			currentLine += 2 + strings.Count(divider, "\n") + 1
+			sb.WriteString(divStyle.Render(
+				strings.Repeat("━", sideWidth) + " 新消息 " + strings.Repeat("━", sideWidth)))
 		}
 		if i > 0 {
 			sb.WriteString("\n\n")
-			currentLine += 2
 		}
-		msgStartLine := currentLine
 		rendered := c.renderMessage(msg)
 		if rendered != "" {
 			sb.WriteString(rendered)
-			lineCount := strings.Count(rendered, "\n") + 1
 
-			// 只为可折叠消息的指示器行注册点击目标
+			// 收集可点击标记（用行内容匹配，不依赖行号计算）
 			switch msg.Role {
 			case "thinking":
-				// thinking 的第一行（▶/▼ 所在行）
-				toggleLines[msgStartLine] = i
+				// thinking 的指示器是 ▶ 或 ▼ 开头
+				markers = append(markers, toggleMarker{msgIdx: i, marker: "▶"})
+				markers = append(markers, toggleMarker{msgIdx: i, marker: "▼"})
 			case "tool":
-				if msg.Content != "" { // 已完成的工具才可折叠
-					// 折叠态：最后一行是 "▶ [+N 行] 点击展开"
-					// 展开态：第一行是 header（⏺ ToolName）
-					toggleLines[msgStartLine] = i                    // header 行
-					toggleLines[msgStartLine+lineCount-1] = i        // 最后一行（折叠提示行）
+				if msg.Content != "" {
+					// 工具折叠提示行含 "点击展开"
+					markers = append(markers, toggleMarker{msgIdx: i, marker: "点击展开"})
+					// 工具 header 行含 BlackCircle
+					markers = append(markers, toggleMarker{msgIdx: i, marker: BlackCircle()})
 				}
 			}
-
-			currentLine += lineCount
 		}
 	}
 	c.committedRendered = sb.String()
-	c.toggleLines = toggleLines
+	c.toggleMarkers = markers
 	c.committedMsgCount = len(c.messages)
 	c.committedBlinkSt = c.toolBlink
 	c.cacheValid = true
