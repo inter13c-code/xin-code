@@ -295,7 +295,8 @@ func (c ChatView) Update(msg tea.Msg) (ChatView, tea.Cmd) {
 	}
 
 	// 鼠标左键点击 toggle 折叠/展开（thinking / tool）
-	if mouseMsg, ok := msg.(tea.MouseMsg); ok && mouseMsg.Type == tea.MouseLeft {
+	if mouseMsg, ok := msg.(tea.MouseMsg); ok &&
+		mouseMsg.Button == tea.MouseButtonLeft && mouseMsg.Action == tea.MouseActionRelease {
 		absLine := mouseMsg.Y + c.viewport.YOffset
 		if absLine >= 0 && absLine < len(c.lineToMsg) {
 			msgIdx := c.lineToMsg[absLine]
