@@ -89,11 +89,16 @@ type ChatView struct {
 
 // newGlamourRenderer 创建白色文字的 Glamour 渲染器
 func newGlamourRenderer(width int) *glamour.TermRenderer {
-	// 基于 dark 主题，覆盖 Document 前景色为白色
+	// 基于 dark 主题，覆盖颜色使其在深色终端上更柔和
 	style := styles.DarkStyleConfig
 	white := "#FFFFFF"
 	style.Document.Color = &white
 	style.Paragraph.Color = &white
+
+	// inline code：去掉刺眼的红色背景，改为柔和的青色无背景
+	codeColor := "#88C0D0"
+	style.Code.StylePrimitive.Color = &codeColor
+	style.Code.StylePrimitive.BackgroundColor = nil
 
 	r, _ := glamour.NewTermRenderer(
 		glamour.WithStyles(style),
