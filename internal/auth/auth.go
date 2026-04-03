@@ -39,3 +39,15 @@ func loadAPIKeyFromConfig(configDir string) string {
 	credPath := filepath.Join(configDir, "auth", "credentials.json")
 	return readAPIKeyFromFile(credPath)
 }
+
+// SaveAPIKey 保存 API Key 到标准凭据路径
+func SaveAPIKey(configDir, apiKey string) error {
+	credPath := filepath.Join(configDir, "auth", "credentials.json")
+	return SaveCredentials(credPath, apiKey)
+}
+
+// ClearAPIKey 清除已保存的 API Key
+func ClearAPIKey(configDir string) error {
+	credPath := filepath.Join(configDir, "auth", "credentials.json")
+	return os.Remove(credPath)
+}
