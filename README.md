@@ -1,5 +1,11 @@
 # Xin Code
 
+[![Build](https://github.com/xincode-ai/xin-code/actions/workflows/build.yml/badge.svg)](https://github.com/xincode-ai/xin-code/actions/workflows/build.yml)
+[![Release](https://img.shields.io/github/v/release/xincode-ai/xin-code?label=release)](https://github.com/xincode-ai/xin-code/releases/latest)
+[![Go Report Card](https://goreportcard.com/badge/github.com/xincode-ai/xin-code)](https://goreportcard.com/report/github.com/xincode-ai/xin-code)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Go Reference](https://pkg.go.dev/badge/github.com/xincode-ai/xin-code.svg)](https://pkg.go.dev/github.com/xincode-ai/xin-code)
+
 ```
  __  __ ___ _   _    ____ ___  ____  _____
  \ \/ /|_ _| \ | |  / ___/ _ \|  _ \| ____|
