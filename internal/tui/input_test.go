@@ -69,6 +69,40 @@ func TestPasteReference(t *testing.T) {
 	}
 }
 
+func TestHistorySearch(t *testing.T) {
+	ib := NewInputBox(nil)
+	ib.history = []string{
+		"/help",
+		"写一个 HTTP 服务器",
+		"/model claude-3-opus",
+		"修复那个 bug",
+		"/compact",
+	}
+
+	// 搜索 "model"
+	results := ib.SearchHistory("model")
+	if len(results) != 1 || results[0] != "/model claude-3-opus" {
+		t.Errorf("搜索 'model' 应返回 1 条，得到 %v", results)
+	}
+
+	// 搜索 "/"
+	results = ib.SearchHistory("/")
+	if len(results) != 3 {
+		t.Errorf("搜索 '/' 应返回 3 条，得到 %d", len(results))
+	}
+
+	// 空搜索返回全部（倒序）
+	results = ib.SearchHistory("")
+	if len(results) != 5 {
+		t.Errorf("空搜索应返回 5 条，得到 %d", len(results))
+	}
+
+	// 最近的在前
+	if results[0] != "/compact" {
+		t.Errorf("空搜索第一条应是最近的 '/compact'，得到 %q", results[0])
+	}
+}
+
 func TestPasteReferenceExpansion(t *testing.T) {
 	ib := NewInputBox(nil)
 	// 模拟一次粘贴

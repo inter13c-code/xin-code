@@ -29,6 +29,12 @@ type InputBox struct {
 	completionIdx   int           // -1 = 无选中
 	completionItems []CommandHint // 当前模糊匹配结果缓存
 
+	// 历史搜索模式
+	searchMode    bool
+	searchQuery   string
+	searchResults []string
+	searchIdx     int
+
 	// 粘贴内容存储
 	pasteStore  map[int]string // pasteID → 原始内容
 	nextPasteID int
@@ -105,6 +111,50 @@ func (i InputBox) Update(msg tea.Msg) (InputBox, tea.Cmd) {
 			i.syncHeight()
 			return i, nil
 		}
+		// 历史搜索模式：拦截所有按键
+		if i.searchMode {
+			switch msg.Type {
+			case tea.KeyEsc:
+				i.searchMode = false
+				i.searchQuery = ""
+				i.searchResults = nil
+				i.searchIdx = -1
+				return i, nil
+			case tea.KeyEnter:
+				if i.searchIdx >= 0 && i.searchIdx < len(i.searchResults) {
+					i.textarea.SetValue(i.searchResults[i.searchIdx])
+				}
+				i.searchMode = false
+				i.searchQuery = ""
+				i.searchResults = nil
+				i.searchIdx = -1
+				return i, nil
+			case tea.KeyUp:
+				if i.searchIdx > 0 {
+					i.searchIdx--
+				}
+				return i, nil
+			case tea.KeyDown:
+				if i.searchIdx < len(i.searchResults)-1 {
+					i.searchIdx++
+				}
+				return i, nil
+			case tea.KeyBackspace:
+				if len(i.searchQuery) > 0 {
+					i.searchQuery = i.searchQuery[:len(i.searchQuery)-1]
+					i.searchResults = i.SearchHistory(i.searchQuery)
+					i.searchIdx = 0
+				}
+				return i, nil
+			case tea.KeyRunes:
+				i.searchQuery += string(msg.Runes)
+				i.searchResults = i.SearchHistory(i.searchQuery)
+				i.searchIdx = 0
+				return i, nil
+			}
+			return i, nil
+		}
+
 		switch msg.Type {
 		case tea.KeyTab:
 			// Tab 补全斜杠命令
@@ -202,6 +252,15 @@ func (i InputBox) Update(msg tea.Msg) (InputBox, tea.Cmd) {
 				i.completionItems = nil
 				return i, nil
 			}
+
+		case tea.KeyCtrlR:
+			if len(i.history) > 0 {
+				i.searchMode = true
+				i.searchQuery = ""
+				i.searchResults = i.SearchHistory("")
+				i.searchIdx = 0
+			}
+			return i, nil
 		}
 	}
 
@@ -230,7 +289,9 @@ func (i InputBox) Update(msg tea.Msg) (InputBox, tea.Cmd) {
 
 func (i InputBox) View() string {
 	var sections []string
-	if hint := i.renderSlashHint(); hint != "" {
+	if i.searchMode {
+		sections = append(sections, i.renderSearchPanel())
+	} else if hint := i.renderSlashHint(); hint != "" {
 		sections = append(sections, hint)
 	}
 	sections = append(sections, i.textarea.View())
@@ -332,6 +393,48 @@ func (i InputBox) Height() int {
 func (i InputBox) hasActiveCompletion() bool {
 	val := strings.TrimSpace(i.textarea.Value())
 	return strings.HasPrefix(val, "/") && !strings.Contains(val, " ") && len(i.completionItems) > 0
+}
+
+func (i InputBox) renderSearchPanel() string {
+	width := min(72, max(34, i.width-2))
+	prompt := lipgloss.NewStyle().Foreground(ColorBrand).Bold(true).Render("搜索历史") +
+		StyleDim.Render(": "+i.searchQuery+"█")
+
+	var lines []string
+	lines = append(lines, prompt)
+
+	maxShow := 8
+	start := 0
+	if i.searchIdx >= maxShow {
+		start = i.searchIdx - maxShow + 1
+	}
+	end := start + maxShow
+	if end > len(i.searchResults) {
+		end = len(i.searchResults)
+	}
+
+	if len(i.searchResults) == 0 && i.searchQuery != "" {
+		lines = append(lines, StyleDim.Render("  无匹配"))
+	}
+
+	for idx := start; idx < end; idx++ {
+		entry := i.searchResults[idx]
+		if len(entry) > width-4 {
+			entry = entry[:width-7] + "..."
+		}
+		if idx == i.searchIdx {
+			lines = append(lines, lipgloss.NewStyle().Foreground(ColorBrand).Bold(true).Render("❯ "+entry))
+		} else {
+			lines = append(lines, StyleDim.Render("  "+entry))
+		}
+	}
+
+	return lipgloss.NewStyle().
+		BorderStyle(lipgloss.RoundedBorder()).
+		BorderForeground(ColorBrand).
+		Padding(0, 1).
+		Width(width).
+		Render(strings.Join(lines, "\n"))
 }
 
 func (i InputBox) renderSlashHint() string {
@@ -491,6 +594,18 @@ func containsANSI(s string) bool {
 		return true
 	}
 	return false
+}
+
+// SearchHistory 按关键词过滤历史记录（倒序，最近的在前）
+func (i InputBox) SearchHistory(query string) []string {
+	query = strings.ToLower(strings.TrimSpace(query))
+	var results []string
+	for j := len(i.history) - 1; j >= 0; j-- {
+		if query == "" || strings.Contains(strings.ToLower(i.history[j]), query) {
+			results = append(results, i.history[j])
+		}
+	}
+	return results
 }
 
 // commonPrefix 计算多个命令名的公共前缀（Tab 补全用）
