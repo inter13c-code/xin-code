@@ -29,7 +29,7 @@ type InputBox struct {
 // NewInputBox 创建输入框
 func NewInputBox(commands []CommandHint) InputBox {
 	ta := textarea.New()
-	ta.Placeholder = "输入需求，回车发送，Alt+Enter 换行，/ 打开命令"
+	ta.Placeholder = "输入消息..."
 	ta.Prompt = StyleInputPrompt.Render("› ")
 	ta.CharLimit = 0 // 不限制
 	ta.SetHeight(1)  // 初始 1 行高度

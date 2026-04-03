@@ -79,6 +79,10 @@ type App struct {
 	// 会话信息
 	SessionID    string
 	SessionTurns int
+
+	// 临时通知（slash 命令显示类结果，不写入 transcript）
+	ephemeralNotice    string
+	ephemeralNoticeAge int // tick 计数器，到达阈值后清除
 }
 
 // AppConfig TUI 初始化配置
@@ -191,6 +195,11 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, nil
 
 	case tea.KeyMsg:
+		// 任意按键清除临时通知
+		if a.ephemeralNotice != "" {
+			a.clearEphemeralNotice()
+		}
+
 		if a.permission.IsVisible() {
 			a.permission, _ = a.permission.Update(msg)
 			if !a.permission.IsVisible() {
@@ -374,6 +383,13 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case MsgSpinnerTick:
 		a.ccSpinner.Tick()
 		a.chat, _ = a.chat.Update(msg) // 转发给 chat 驱动工具闪烁
+		// 临时通知老化
+		if a.ephemeralNotice != "" {
+			a.ephemeralNoticeAge++
+			if a.ephemeralNoticeAge >= ephemeralNoticeTTL {
+				a.clearEphemeralNotice()
+			}
+		}
 		cmds = append(cmds, SpinnerTickCmd())
 		return a, tea.Batch(cmds...)
 	}
@@ -411,8 +427,19 @@ func (a *App) View() string {
 		return a.layout.Render(content)
 	}
 
-	// BottomFloat 层：spinner / 权限确认
+	// BottomFloat 层：临时通知 / spinner / 权限确认
 	var floatParts []string
+	if a.ephemeralNotice != "" {
+		// 临时通知渲染（带左侧边框，与 slash hints 风格统一）
+		noticeWidth := min(80, max(40, contentWidth-4))
+		notice := lipgloss.NewStyle().
+			BorderLeft(true).
+			BorderForeground(ColorBrand).
+			PaddingLeft(1).
+			Width(noticeWidth).
+			Render(StyleDim.Render(a.ephemeralNotice))
+		floatParts = append(floatParts, notice)
+	}
 	if spinnerView := a.ccSpinner.View(); spinnerView != "" {
 		floatParts = append(floatParts, spinnerView)
 	}
@@ -518,7 +545,8 @@ func (a *App) handleSlashCommand(cmd string) (tea.Model, tea.Cmd) {
 		return a, tea.Batch(submitCmd, a.safeWaitForEvent())
 
 	case slash.ResultDisplay:
-		a.chat.AddSystemMessage(result.Content)
+		// 纯信息展示类命令不写入 transcript，显示为临时通知
+		a.showEphemeralNotice(result.Content)
 	}
 
 	return a, nil
@@ -542,6 +570,21 @@ func (a *App) resizeLayout() {
 	a.diff, _ = a.diff.Update(tea.WindowSizeMsg{Width: contentWidth, Height: a.height})
 }
 
+
+// ephemeralNoticeTTL 临时通知存活的 tick 数（80ms/tick × 125 ≈ 10秒）
+const ephemeralNoticeTTL = 125
+
+// showEphemeralNotice 显示临时通知（不写入 transcript）
+func (a *App) showEphemeralNotice(content string) {
+	a.ephemeralNotice = content
+	a.ephemeralNoticeAge = 0
+}
+
+// clearEphemeralNotice 清除临时通知
+func (a *App) clearEphemeralNotice() {
+	a.ephemeralNotice = ""
+	a.ephemeralNoticeAge = 0
+}
 
 func (a *App) shouldRouteKeyToChat(msg tea.KeyMsg) bool {
 	switch msg.String() {
