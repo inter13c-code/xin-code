@@ -14,12 +14,13 @@ import (
 type AppState int
 
 const (
-	StateInput       AppState = iota // 等待用户输入
-	StateQuery                       // 等待模型响应
-	StateToolExec                    // 工具执行中
-	StatePermission                  // 等待权限确认
-	StateDiffPreview                 // 等待差异确认
-	StateAskUser                     // 询问工具等待用户输入
+	StateInput        AppState = iota // 等待用户输入
+	StateQuery                        // 等待模型响应
+	StateToolExec                     // 工具执行中
+	StatePermission                   // 等待权限确认
+	StateDiffPreview                  // 等待差异确认
+	StateAskUser                      // 询问工具等待用户输入
+	StateResumeSelect                 // 会话恢复选择器
 )
 
 // EventSender 模型代理向界面发送事件的回调接口
@@ -31,11 +32,12 @@ type App struct {
 	layout Layout
 
 	// 子组件
-	chat       ChatView
-	input      InputBox
-	permission PermissionDialog
-	diff       DiffDialog
-	ccSpinner  SpinnerState
+	chat           ChatView
+	input          InputBox
+	permission     PermissionDialog
+	diff           DiffDialog
+	ccSpinner      SpinnerState
+	resumeSelector ResumeSelector
 
 	// 斜杠命令
 	slashHandler *slash.Handler
@@ -106,12 +108,13 @@ func NewApp(cfg AppConfig) *App {
 	chat.AddSystemMessage(renderWelcomeBanner(cfg))
 
 	return &App{
-		chat:         chat,
-		input:        NewInputBox(commandHintsFromSlash(slashH.AllCommands())),
-		permission:   NewPermissionDialog(),
-		diff:         NewDiffDialog(),
-		ccSpinner:    NewSpinnerState(),
-		slashHandler: slashH,
+		chat:           chat,
+		input:          NewInputBox(commandHintsFromSlash(slashH.AllCommands())),
+		permission:     NewPermissionDialog(),
+		diff:           NewDiffDialog(),
+		ccSpinner:      NewSpinnerState(),
+		resumeSelector: NewResumeSelector(),
+		slashHandler:   slashH,
 		state:        StateInput,
 		eventCh:      make(chan tea.Msg, 512),
 		submitCh:     make(chan string, 8),
@@ -214,6 +217,16 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if !a.diff.IsVisible() {
 				a.state = StateToolExec
 				cmds = append(cmds, a.safeWaitForEvent())
+			}
+			return a, tea.Batch(cmds...)
+		}
+
+		// 会话恢复选择器拦截键盘事件
+		if a.resumeSelector.IsVisible() {
+			a.resumeSelector, _ = a.resumeSelector.Update(msg)
+			if !a.resumeSelector.IsVisible() {
+				a.state = StateInput
+				cmds = append(cmds, a.input.Focus())
 			}
 			return a, tea.Batch(cmds...)
 		}
@@ -425,6 +438,11 @@ func (a *App) View() string {
 	if a.diff.IsVisible() {
 		content.Modal = a.diff.View()
 		return a.layout.Render(content)
+	}
+
+	// Overlay 层：选择器等覆盖组件
+	if a.resumeSelector.IsVisible() {
+		content.Overlay = a.resumeSelector.View()
 	}
 
 	// BottomFloat 层：临时通知 / spinner / 权限确认

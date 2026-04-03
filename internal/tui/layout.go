@@ -34,9 +34,12 @@ func (l *Layout) Render(content LayerContent) string {
 		return content.Modal
 	}
 
-	// 组装：主区域 + 浮层 + 底部
+	// 组装：主区域 + Overlay（如有）+ 浮层 + 底部
 	var parts []string
 	parts = append(parts, content.Main)
+	if content.Overlay != "" {
+		parts = append(parts, content.Overlay)
+	}
 	if content.BottomFloat != "" {
 		parts = append(parts, content.BottomFloat)
 	}
