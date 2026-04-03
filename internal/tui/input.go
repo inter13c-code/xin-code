@@ -28,6 +28,10 @@ type InputBox struct {
 	lastMouseTime   time.Time     // 最近一次鼠标事件时间戳（用于抑制转义碎片）
 	completionIdx   int           // -1 = 无选中
 	completionItems []CommandHint // 当前模糊匹配结果缓存
+
+	// 粘贴内容存储
+	pasteStore  map[int]string // pasteID → 原始内容
+	nextPasteID int
 }
 
 // NewInputBox 创建输入框
@@ -51,6 +55,7 @@ func NewInputBox(commands []CommandHint) InputBox {
 		histIdx:       -1,
 		completionIdx: -1,
 		slashCommands: commands,
+		pasteStore:    make(map[int]string),
 	}
 }
 
@@ -92,6 +97,14 @@ func (i InputBox) Update(msg tea.Msg) (InputBox, tea.Cmd) {
 				return i, nil
 			}
 		}
+		// 粘贴事件：Paste=true 时内容在 Runes 中一次性到达
+		if msg.Paste {
+			content := string(msg.Runes)
+			display, _ := i.HandlePaste(content)
+			i.textarea.InsertString(display)
+			i.syncHeight()
+			return i, nil
+		}
 		switch msg.Type {
 		case tea.KeyTab:
 			// Tab 补全斜杠命令
@@ -132,6 +145,8 @@ func (i InputBox) Update(msg tea.Msg) (InputBox, tea.Cmd) {
 				i.textarea.Reset()
 				return i, nil
 			}
+			// 展开粘贴引用为原始内容
+			text = i.expandPasteRefs(text)
 			// 保存到历史
 			i.history = append(i.history, text)
 			i.histIdx = -1
@@ -250,6 +265,53 @@ func (i *InputBox) syncHeight() {
 		h = i.textarea.MaxHeight
 	}
 	i.textarea.SetHeight(h)
+}
+
+// pasteRefThreshold 超过此长度的粘贴内容自动引用化
+const pasteRefThreshold = 1024
+
+// HandlePaste 处理粘贴内容：短文本原样返回，长文本存储并返回引用标记
+func (i *InputBox) HandlePaste(content string) (display string, stored string) {
+	if len(content) <= pasteRefThreshold {
+		return content, ""
+	}
+	i.nextPasteID++
+	id := i.nextPasteID
+	i.pasteStore[id] = content
+	lines := strings.Count(content, "\n")
+	if lines == 0 {
+		display = fmt.Sprintf("[Pasted text #%d]", id)
+	} else {
+		display = fmt.Sprintf("[Pasted text #%d +%d lines]", id, lines)
+	}
+	return display, content
+}
+
+// pasteRefRegex 匹配粘贴引用占位符
+var pasteRefRegex = regexp.MustCompile(`\[Pasted text #(\d+)(?:\s\+\d+ lines)?\]`)
+
+// expandPasteRefs 将文本中的粘贴引用替换为原始内容
+func (i *InputBox) expandPasteRefs(text string) string {
+	if len(i.pasteStore) == 0 {
+		return text
+	}
+	return pasteRefRegex.ReplaceAllStringFunc(text, func(match string) string {
+		sub := pasteRefRegex.FindStringSubmatch(match)
+		if len(sub) < 2 {
+			return match
+		}
+		var id int
+		fmt.Sscanf(sub[1], "%d", &id)
+		if content, ok := i.pasteStore[id]; ok {
+			return content
+		}
+		return match
+	})
+}
+
+// GetPastedContent 获取存储的粘贴内容
+func (i InputBox) GetPastedContent(id int) string {
+	return i.pasteStore[id]
 }
 
 // Value 获取当前值
