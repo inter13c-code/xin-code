@@ -516,7 +516,12 @@ func (a *App) resizeLayout() {
 func (a *App) renderFooter() string {
 	parts := []string{shortModelName(a.model)}
 	parts = append(parts, a.tracker.CostString())
-	parts = append(parts, fmt.Sprintf("%d%% context", a.contextPercent()))
+
+	// 上下文使用量分级颜色（<60% 绿 / 60-80% 黄 / >80% 红）
+	ctxPercent := a.contextPercent()
+	ctxColor := ContextColor(float64(ctxPercent))
+	ctxStyle := lipgloss.NewStyle().Foreground(ctxColor)
+	parts = append(parts, ctxStyle.Render(fmt.Sprintf("%d%% context", ctxPercent)))
 
 	// 权限模式简写（CC StatusLine 也显示权限模式）
 	permLabels := map[string]string{
