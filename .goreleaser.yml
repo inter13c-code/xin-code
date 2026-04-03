@@ -1,13 +1,14 @@
 version: 2
 
+project_name: xin-code
+
+before:
+  hooks:
+    - go mod tidy
+
 builds:
-  - main: .
-    binary: xin-code
-    ldflags:
-      - -s -w
-      - -X main.Version={{.Version}}
-      - -X main.Commit={{.ShortCommit}}
-      - -X main.Date={{.Date}}
+  - env:
+      - CGO_ENABLED=0
     goos:
       - linux
       - darwin
@@ -15,33 +16,35 @@ builds:
     goarch:
       - amd64
       - arm64
-    env:
-      - CGO_ENABLED=0
+    ldflags:
+      - -s -w
+      - -X main.Version={{.Version}}
+      - -X main.Commit={{.ShortCommit}}
+      - -X main.Date={{.Date}}
 
 archives:
-  - format_overrides:
+  - format: tar.gz
+    name_template: >-
+      {{ .ProjectName }}_{{ .Os }}_{{ .Arch }}
+    format_overrides:
       - goos: windows
         format: zip
 
 checksum:
-  name_template: 'checksums.txt'
+  name_template: checksums.txt
 
 changelog:
   sort: asc
   filters:
     exclude:
-      - '^docs:'
-      - '^test:'
-      - '^chore:'
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
 
-brews:
-  - repository:
-      owner: xincode-ai
-      name: homebrew-tap
-    homepage: https://github.com/xincode-ai/xin-code
-    description: "AI-powered terminal coding agent"
-    license: MIT
-    install: |
-      bin.install "xin-code"
-    test: |
-      system "#{bin}/xin-code", "--version"
+release:
+  github:
+    owner: xincode-ai
+    name: xin-code
+  draft: false
+  prerelease: auto
+  name_template: "v{{.Version}}"
