@@ -82,6 +82,9 @@ type ChatView struct {
 	streamRenderedPreview string    // 当前流式消息的 Markdown 预览（为空则回退纯文本）
 	lastPreviewRender     time.Time // 上次预览渲染的时间
 	streamDirty           bool      // streamBuf 自上次预览渲染后有变更
+
+	// 工具输出展开状态：true = 所有输出全展开，false = 超阈值自动折叠
+	toolOutputExpanded bool
 }
 
 // newGlamourRenderer 创建白色文字的 Glamour 渲染器
@@ -116,6 +119,16 @@ func NewChatView(width, height int) ChatView {
 		unreadDividerIdx: -1,
 		userAtBottom:     true,
 	}
+}
+
+// SetToolOutputExpanded 设置工具输出展开状态
+func (c *ChatView) SetToolOutputExpanded(expanded bool) {
+	c.toolOutputExpanded = expanded
+}
+
+// IsToolOutputExpanded 返回工具输出展开状态
+func (c ChatView) IsToolOutputExpanded() bool {
+	return c.toolOutputExpanded
 }
 
 func (c ChatView) Init() tea.Cmd { return nil }
@@ -277,6 +290,14 @@ func (c ChatView) Update(msg tea.Msg) (ChatView, tea.Cmd) {
 				return c, cmd
 			}
 		}
+	}
+
+	// Ctrl+O toggle 工具输出展开/折叠
+	if keyMsg, ok := msg.(tea.KeyMsg); ok && keyMsg.Type == tea.KeyCtrlO {
+		c.toolOutputExpanded = !c.toolOutputExpanded
+		c.invalidateCache()
+		c.refreshContent(false)
+		return c, nil
 	}
 
 	c.viewport, cmd = c.viewport.Update(msg)
@@ -744,7 +765,7 @@ func (c *ChatView) renderToolMessage(msg ChatMessage) string {
 	lineCount := len(lines)
 
 	var displayLines []string
-	if msg.Folded || lineCount > foldThreshold {
+	if !c.toolOutputExpanded && (msg.Folded || lineCount > foldThreshold) {
 		// 折叠：显示前 3 行 + 省略提示
 		previewEnd := 3
 		if previewEnd > lineCount {

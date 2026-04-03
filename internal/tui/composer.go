@@ -10,13 +10,14 @@ import (
 
 // ComposerConfig 底部 Composer 渲染所需数据
 type ComposerConfig struct {
-	Model      string
-	PermMode   string
-	MouseMode  MouseMode
-	ReadOnly   bool
-	Tracker    *cost.Tracker
-	MaxContext int
-	WorkDir    string
+	Model        string
+	PermMode     string
+	MouseMode    MouseMode
+	ReadOnly     bool
+	ToolExpanded bool
+	Tracker      *cost.Tracker
+	MaxContext   int
+	WorkDir      string
 }
 
 // renderComposer 渲染 Claude 风格的双分隔线 Composer
@@ -68,6 +69,13 @@ func renderComposerStatus(cfg ComposerConfig, width int) string {
 		ctxColor := ContextColor(percent)
 		ctxStyle := lipgloss.NewStyle().Foreground(ctxColor)
 		rightParts = append(rightParts, ctxStyle.Render(fmt.Sprintf("%d%%", int(percent+0.5))))
+	}
+
+	// 工具输出折叠/展开提示（动态显示当前状态）
+	if cfg.ToolExpanded {
+		rightParts = append(rightParts, dim.Render("^O 折叠"))
+	} else {
+		rightParts = append(rightParts, dim.Render("^O 展开"))
 	}
 
 	// 鼠标模式（带切换提示）

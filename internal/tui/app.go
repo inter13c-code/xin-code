@@ -578,12 +578,13 @@ func (a *App) View() string {
 
 	// Bottom 层：Composer（双分隔线 + 输入 + 状态栏）
 	content.Bottom = renderComposer(a.input.View(), ComposerConfig{
-		Model:      a.model,
-		PermMode:   a.permMode,
-		MouseMode:  a.mouseMode,
-		ReadOnly:   a.readOnly,
-		Tracker:    a.tracker,
-		MaxContext: a.maxContext,
+		Model:        a.model,
+		PermMode:     a.permMode,
+		MouseMode:    a.mouseMode,
+		ReadOnly:     a.readOnly,
+		ToolExpanded: a.chat.IsToolOutputExpanded(),
+		Tracker:      a.tracker,
+		MaxContext:   a.maxContext,
 	}, contentWidth)
 
 	// 主滚动区：transcript（含"有新消息"提示，尺寸同步由 resizeLayout 负责）
@@ -738,12 +739,13 @@ func (a *App) resizeLayout() {
 func (a *App) syncChatSize() {
 	contentWidth := a.contentWidth()
 	bottomContent := renderComposer(a.input.View(), ComposerConfig{
-		Model:      a.model,
-		PermMode:   a.permMode,
-		MouseMode:  a.mouseMode,
-		ReadOnly:   a.readOnly,
-		Tracker:    a.tracker,
-		MaxContext: a.maxContext,
+		Model:        a.model,
+		PermMode:     a.permMode,
+		MouseMode:    a.mouseMode,
+		ReadOnly:     a.readOnly,
+		ToolExpanded: a.chat.IsToolOutputExpanded(),
+		Tracker:      a.tracker,
+		MaxContext:   a.maxContext,
 	}, contentWidth)
 	chatHeight := a.layout.MainHeight(bottomContent)
 	a.chat, _ = a.chat.Update(tea.WindowSizeMsg{Width: contentWidth, Height: chatHeight})
@@ -848,6 +850,10 @@ func (a *App) shouldRouteKeyToChat(msg tea.KeyMsg) bool {
 		// t 键只在非输入状态下路由到 chat（toggle thinking）
 		return a.state != StateInput && a.state != StateAskUser
 	default:
+		// Ctrl+O 全局 toggle 工具输出展开/折叠
+		if msg.Type == tea.KeyCtrlO {
+			return true
+		}
 		return false
 	}
 }
