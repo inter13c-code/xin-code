@@ -62,17 +62,19 @@ func (d DiffDialog) Update(msg tea.Msg) (DiffDialog, tea.Cmd) {
 	return d, cmd
 }
 
-// View 渲染差异预览弹层
+// View 渲染差异预览弹层（modal 层独占全屏）
 func (d DiffDialog) View() string {
 	if !d.visible {
 		return ""
 	}
 
+	// 标题行：文件路径
+	title := StyleDiffHeader.Render("差异预览") + "  " + StyleDim.Render(d.path)
+
 	content := []string{
-		StyleDiffHeader.Render("差异预览"),
-		StyleDim.Render(d.path),
+		title,
 		d.viewport.View(),
-		StyleDim.Render("Y 确认写入  ·  N 取消  ·  鼠标滚轮 / PgUp / PgDn 浏览"),
+		StyleDim.Render("y 接受 · n 拒绝 · 鼠标滚轮/PgUp/PgDn 浏览"),
 	}
 
 	box := lipgloss.NewStyle().
