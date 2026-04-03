@@ -92,9 +92,9 @@ func (c ChatView) Update(msg tea.Msg) (ChatView, tea.Cmd) {
 		c.refreshContent(c.shouldAutoScroll())
 
 	case MsgSpinnerTick:
-		// 只在有执行中工具时才刷新（避免无意义的全量重渲染导致闪烁）
+		// 在有执行中工具或 thinking 时刷新（驱动闪烁动画）
 		c.toolBlink = !c.toolBlink
-		if c.hasInProgressTools() {
+		if c.hasInProgressTools() || c.hasThinking() {
 			c.refreshContent(c.shouldAutoScroll())
 		}
 
@@ -242,6 +242,19 @@ func (c ChatView) hasInProgressTools() bool {
 	return false
 }
 
+func (c ChatView) hasThinking() bool {
+	for i := len(c.messages) - 1; i >= 0; i-- {
+		if c.messages[i].Role == "thinking" {
+			return true
+		}
+		// thinking 只在最近的消息中有意义，遇到其他 role 就停
+		if c.messages[i].Role == "user" || c.messages[i].Role == "assistant" {
+			return false
+		}
+	}
+	return false
+}
+
 func (c ChatView) shouldAutoScroll() bool {
 	return c.viewport.AtBottom() || c.viewport.TotalLineCount() == 0
 }
@@ -266,8 +279,12 @@ func (c *ChatView) renderMessage(msg ChatMessage) string {
 		return wrapMessageResponse(body)
 
 	case "thinking":
-		// ∴ Thinking（dim + italic）
-		return StyleThinking.Render(SymThinking + " Thinking")
+		// ∴ Thinking — 符号在 brand/dim 色间闪烁，给用户"还在运转"的感知
+		symStyle := StyleThinking
+		if c.toolBlink {
+			symStyle = lipgloss.NewStyle().Foreground(ColorBrand).Italic(true)
+		}
+		return symStyle.Render(SymThinking) + StyleThinking.Render(" Thinking")
 
 	case "tool":
 		return c.renderToolMessage(msg)
