@@ -15,6 +15,9 @@ type PermissionDialog struct {
 	response chan PermissionResponse
 	width    int
 	height   int
+
+	feedbackKey string // 刚按下的键 ("y"/"n"/"a"/"e")
+	feedbackAge int    // tick 计数，>= 2 时清除
 }
 
 // NewPermissionDialog 创建权限对话框
@@ -33,21 +36,33 @@ func (p PermissionDialog) Update(msg tea.Msg) (PermissionDialog, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "y", "Y":
+			p.feedbackKey = "y"
 			p.respond(PermAllow)
 			return p, nil
 		case "n", "N":
+			p.feedbackKey = "n"
 			p.respond(PermDeny)
 			return p, nil
 		case "a", "A":
+			p.feedbackKey = "a"
 			p.respond(PermAlways)
 			return p, nil
 		case "e", "E":
-			// 使用 E 表示始终拒绝
+			p.feedbackKey = "e"
 			p.respond(PermNever)
 			return p, nil
 		case "esc", "ctrl+c":
 			p.respond(PermDeny)
 			return p, nil
+		}
+
+	case MsgSpinnerTick:
+		if p.feedbackKey != "" {
+			p.feedbackAge++
+			if p.feedbackAge >= 2 {
+				p.feedbackKey = ""
+				p.feedbackAge = 0
+			}
 		}
 
 	case tea.WindowSizeMsg:

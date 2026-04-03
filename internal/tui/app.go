@@ -898,6 +898,9 @@ func renderWelcomeBanner(cfg AppConfig) string {
 		lines = append(lines, orange.Render(art[i])+"    "+right)
 	}
 
+	lines = append(lines, "")
+	lines = append(lines, dim.Render("  输入 / 查看命令 · Ctrl+C 退出 · Ctrl+Y 切换鼠标"))
+
 	return strings.Join(lines, "\n")
 }
 

@@ -364,7 +364,13 @@ func (c *ChatView) rebuildCommittedCache() {
 			if dividerWidth < 10 {
 				dividerWidth = 10
 			}
-			sb.WriteString(StyleDim.Render(strings.Repeat("─", dividerWidth) + " 新消息"))
+			divStyle := lipgloss.NewStyle().Foreground(ColorWarning)
+			sideWidth := (dividerWidth - 8) / 2 // 8 = width of " 新消息 "
+			if sideWidth < 2 {
+				sideWidth = 2
+			}
+			sb.WriteString(divStyle.Render(
+				strings.Repeat("━", sideWidth) + " 新消息 " + strings.Repeat("━", sideWidth)))
 		}
 		if i > 0 {
 			sb.WriteString("\n\n")
@@ -431,10 +437,28 @@ func (c *ChatView) refreshStreaming(stickToBottom bool) {
 func (c ChatView) ViewWithHint() string {
 	view := c.viewport.View()
 	if c.hasNewMessages && !c.userAtBottom {
-		hint := StyleDim.Render("  ↓ 有新消息，按 End 跳到最新")
+		count := c.countNewMessages()
+		hint := lipgloss.NewStyle().Foreground(ColorBrand).Render(
+			fmt.Sprintf("  ↓ %d 条新消息，按 End 跳到最新", count))
 		return view + "\n" + hint
 	}
 	return view
+}
+
+func (c ChatView) countNewMessages() int {
+	if c.unreadDividerIdx < 0 {
+		return 1
+	}
+	count := 0
+	for i := c.unreadDividerIdx; i < len(c.messages); i++ {
+		if c.messages[i].Role != "system" && c.messages[i].Role != "thinking" {
+			count++
+		}
+	}
+	if count < 1 {
+		count = 1
+	}
+	return count
 }
 
 func (c ChatView) hasInProgressTools() bool {
@@ -571,7 +595,11 @@ func (c *ChatView) renderMessage(msg ChatMessage) string {
 		return StyleDim.Render(msg.Content)
 
 	case "error":
-		return wrapMessageResponse(StyleError.Render(msg.Content))
+		return lipgloss.NewStyle().
+			BorderLeft(true).
+			BorderForeground(ColorError).
+			PaddingLeft(1).
+			Render("⚠ " + StyleError.Render(msg.Content))
 
 	default:
 		return msg.Content
@@ -729,7 +757,8 @@ func (c *ChatView) renderToolMessage(msg ChatMessage) string {
 
 	outputBody := StyleToolOutput.Render(strings.Join(displayLines, "\n"))
 	if len(displayLines) < lineCount {
-		outputBody += "\n" + StyleDim.Render(fmt.Sprintf("… +%d lines", lineCount-len(displayLines)))
+		outputBody += "\n" + lipgloss.NewStyle().Foreground(ColorBrand).Render(
+			fmt.Sprintf("[+%d 行]", lineCount-len(displayLines)))
 	}
 
 	return header + "\n" + wrapMessageResponse(outputBody)
